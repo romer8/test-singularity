@@ -64,3 +64,8 @@ jobs:
           # Push the image to the 'ghcr' remote with the desired tag
           singularity push hello.sif oras://ghcr.io/${{ env.IMAGE_NAME }}:latest_x86
 
+
+      - name: Test the image
+        run: |
+          singularity pull oras://ghcr.io/romer8/test-singularity:hello
+          singularity run test-singularity.sif

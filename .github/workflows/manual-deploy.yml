@@ -59,7 +59,7 @@ jobs:
       - name: Install Singularity
         if: ${{ env.keepgoing == 'true' }}
         env:
-          SINGULARITY_VERSION: 3.8.1
+          SINGULARITY_VERSION: 4.3.0
           GOPATH: /tmp/go
       
         run: |
