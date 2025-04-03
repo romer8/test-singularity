@@ -54,7 +54,21 @@ jobs:
             libgpgme11-dev \
             squashfs-tools \
             libseccomp-dev \
-            pkg-config
+            pkg-config \
+            autoconf \
+            automake \
+            cryptsetup \
+            fuse2fs \
+            git \
+            fuse \
+            libfuse-dev \
+            libtool \
+            runc \
+            squashfs-tools-ng \
+            uidmap \
+            wget \
+            zlib1g-dev \
+
 
       - name: Install Singularity
         if: ${{ env.keepgoing == 'true' }}
