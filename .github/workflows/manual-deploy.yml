@@ -68,6 +68,7 @@ jobs:
             uidmap \
             wget \
             zlib1g-dev \
+            libsubid-dev
 
 
       - name: Install Singularity
