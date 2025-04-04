@@ -1,112 +1,160 @@
-# name: Singularity Build (native)
-# on: 
-#   push:
-#     branches:
-#       - main
-#       - master
+name: Singularity Build (native)
+on: 
+  push:
+    branches:
+      - main
 
-# jobs:
-#   changes:
-#     name: "Changed Singularity Recipes"
-#     runs-on: ubuntu-latest
-#     outputs:
-#       changed_file: ${{ steps.files.outputs.added_modified }}
-#     steps:
-#       - id: files
-#         uses: jitterbit/get-changed-files@b17fbb00bdc0c0f63fcf166580804b4d2cdc2a42
-#         with:
-#           format: 'json'
+#gioelkin/ngiab
+jobs:
+  changes:
+    name: "Changed Singularity Recipes"
+    runs-on: ubuntu-latest
+    outputs:
+      changed_file: ${{ steps.files.outputs.added_modified }}
+    steps:
+      - id: files
+        uses: jitterbit/get-changed-files@b17fbb00bdc0c0f63fcf166580804b4d2cdc2a42
+        with:
+          format: 'json'
 
-#   build-test-containers:
-#     needs: changes
-#     runs-on: ubuntu-latest
-#     strategy:
-#       fail-fast: false
-#       matrix:
-#         changed_file: ${{ fromJson(needs.changes.outputs.changed_file) }}
+  build-test-containers:
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        changed_file: ${{ fromJson(needs.changes.outputs.changed_file) }}
+    name: Check ${{ matrix.changed_file }}
+    steps:
+      - name: Continue if Singularity Recipe
+        run: |
+          if [[ "${{ matrix.changed_file }}" == *.def ]]; then
+            echo "keepgoing=true" >> $GITHUB_ENV
+          fi
 
-#     name: Check ${{ matrix.changed_file }}
-#     steps:
-#       - name: Continue if Singularity Recipe
-#         run: |
-#           if [[ "${{ matrix.changed_file }}" = *.def ]]; then
-#             echo "keepgoing=true" >> $GITHUB_ENV
-#           fi
-
-#       - name: Checkout repository
-#         if: ${{ env.keepgoing == 'true' }}
-#         uses: actions/checkout@v4
+      - name: Checkout repository
+        if: ${{ env.keepgoing == 'true' }}
+        uses: actions/checkout@v4
       
-#       - name: Set Container Tag
-#         if: ${{ env.keepgoing == 'true' }}
-#         run: |
-#           TAG="${GITHUB_SHA::7}-x86"
-#           echo "Container Tag: $TAG"
-#           echo "tag=$TAG" >> $GITHUB_ENV
+      - name: Set Container Tag
+        if: ${{ env.keepgoing == 'true' }}
+        run: |
+          TAG="${GITHUB_SHA::7}-x86"
+          echo "Container Tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_ENV
 
-#       - name: Set up Go
-#         if: ${{ env.keepgoing == 'true' }}
-#         uses: actions/setup-go@v5
-#         with:
-#           go-version: '1.21'
-#         id: go
+      - name: Set up Go
+        if: ${{ env.keepgoing == 'true' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.1'
+        id: go
 
-#       - name: Install Dependencies
-#         if: ${{ env.keepgoing == 'true' }}
-#         run: |
-#           sudo apt-get update && sudo apt-get install -y \
-#             build-essential \
-#             libssl-dev \
-#             uuid-dev \
-#             libgpgme11-dev \
-#             squashfs-tools \
-#             libseccomp-dev \
-#             pkg-config \
-#             autoconf \
-#             automake \
-#             cryptsetup \
-#             fuse2fs \
-#             git \
-#             fuse \
-#             libfuse-dev \
-#             libtool \
-#             runc \
-#             squashfs-tools-ng \
-#             uidmap \
-#             wget \
-#             zlib1g-dev \
-#             libsubid-dev
+      - name: Install Dependencies
+        if: ${{ env.keepgoing == 'true' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            build-essential \
+            libssl-dev \
+            uuid-dev \
+            libgpgme11-dev \
+            squashfs-tools \
+            libseccomp-dev \
+            pkg-config \
+            autoconf \
+            automake \
+            cryptsetup \
+            fuse2fs \
+            git \
+            fuse \
+            libfuse-dev \
+            libtool \
+            runc \
+            squashfs-tools-ng \
+            uidmap \
+            wget \
+            zlib1g-dev \
+            libsubid-dev
 
-#       - name: Install Singularity
-#         if: ${{ env.keepgoing == 'true' }}
-#         env:
-#           SINGULARITY_VERSION: 4.3.0
-#           GOPATH: /tmp/go
-#         run: |
-#           mkdir -p $GOPATH
-#           sudo mkdir -p /usr/local/var/singularity/mnt
-#           mkdir -p $GOPATH/src/github.com/sylabs
-#           cd $GOPATH/src/github.com/sylabs
-#           wget -qO- https://github.com/sylabs/singularity/releases/download/v${SINGULARITY_VERSION}/singularity-ce-${SINGULARITY_VERSION}.tar.gz | tar xzv
-#           cd singularity-ce-${SINGULARITY_VERSION}
-#           ./mconfig -p /usr/local
-#           make -C builddir
-#           sudo make -C builddir install
+      - name: Install Singularity
+        if: ${{ env.keepgoing == 'true' }}
+        env:
+          SINGULARITY_VERSION: 4.3.0
+          GOPATH: /tmp/go
+        run: |
+          mkdir -p $GOPATH
+          sudo mkdir -p /usr/local/var/singularity/mnt
+          mkdir -p $GOPATH/src/github.com/sylabs
+          cd $GOPATH/src/github.com/sylabs
+          wget -qO- https://github.com/sylabs/singularity/releases/download/v${SINGULARITY_VERSION}/singularity-ce-${SINGULARITY_VERSION}.tar.gz | tar xzv
+          cd singularity-ce-${SINGULARITY_VERSION}
+          ./mconfig -p /usr/local
+          make -C builddir
+          sudo make -C builddir install
 
-#       - name: Build Container
-#         if: ${{ env.keepgoing == 'true' }}
-#         env:
-#           recipe: ${{ matrix.changed_file }}
-#         run: |
-#           sudo -E singularity build container.sif "${{ matrix.changed_file }}"
+      - name: Build Container
+        if: ${{ env.keepgoing == 'true' }}
+        env:
+          recipe: ${{ matrix.changed_file }}
+        run: |
+          sudo -E singularity build container.sif "${{ matrix.changed_file }}"
 
-#       - name: Test Singularity Container
-#         if: ${{ env.keepgoing == 'true' }}
-#         run: |
-#           singularity exec container.sif echo "Container Test Successful!"
+      - name: Test Singularity Container
+        if: ${{ env.keepgoing == 'true' }}
+        run: |
+          singularity exec container.sif echo "Container Test Successful!"
 
-#       - name: Login and Deploy Container
-#         if: (github.event_name != 'pull_request' && env.keepgoing == 'true')
-#         run: |         
-#           echo "${{ secrets.GITHUB_TOKEN }}" | singularity registry login -u "${{ secrets.GHCR_USERNAME }}" --password-stdin oras://ghcr.io
-#           singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${{ env.tag }}
+
+  push-ghcr:
+    name: Push Container to GitHub Registry
+    needs: build-test-containers
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Login and Deploy Container to GitHub Registry
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | singularity registry login -u "${{ secrets.GHCR_USERNAME }}" --password-stdin oras://ghcr.io
+          singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${{ env.tag }}
+
+  push-sylabs:
+    name: Push Container to SYLABS Cloud
+    needs: build-test-containers
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Import and Verify SYLABS Cloud Signing Key
+        env:
+          KEY_B64: ${{ secrets.SIGNING_KEY }}
+          KEY_PASS: ${{ secrets.KEY_PASSPHRASE }}
+        run: |
+          echo "$KEY_B64" | base64 -d > private.asc
+          echo "=== Key File Header ==="
+          head -n 1 private.asc
+          echo "=== Key Import ==="
+          echo "$KEY_PASS" | singularity key import private.asc 2>&1 | tee import.log
+          echo "=== Imported Keys ==="
+          singularity key list
+
+      - name: Sign the image
+        run: |
+          echo "${{ secrets.KEY_PASSPHRASE }}" | singularity sign --keyidx 0 container.sif
+
+      - name: Login and Push Singularity Image to SYLABS Cloud
+        env:
+          SYLABS_AUTH_TOKEN: ${{ secrets.SYLABS_AUTH_TOKEN }}
+          SYLABS_REPO: ${{ secrets.SYLABS_REPO }}
+        run: |
+          TOKEN_FILE=$(mktemp)
+          echo "$SYLABS_AUTH_TOKEN" > "$TOKEN_FILE"
+          echo "$SYLABS_REPO" > "$REPO"
+          if singularity remote login --tokenfile "$TOKEN_FILE"; then
+              if singularity search ${GITHUB_REPOSITORY} | grep -q 'latest_x86'; then
+                singularity delete --force library://$REPO/${GITHUB_REPOSITORY}:${{ env.tag }}
+              fi
+              singularity push container.sif library://$REPO/${GITHUB_REPOSITORY}:${{ env.tag }}
+          else
+              echo "Login failed"
+              exit 1
+          fi
+          rm "$TOKEN_FILE"
