@@ -120,3 +120,9 @@ jobs:
                 echo ${{ secrets.GITHUB_TOKEN }} | singularity registry login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
                 singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}
             fi
+
+  
+      - name: Test the image
+        run: |
+          singularity pull oras://ghcr.io/romer8/test-singularity:hello
+          singularity run test-singularity.sif          
