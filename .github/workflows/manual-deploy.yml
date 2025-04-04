@@ -104,24 +104,13 @@ jobs:
         run: |
           singularity exec container.sif echo "Container Test Successful!"
 
-      - name: Upload Container Artifact
-        if: ${{ env.keepgoing == 'true' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: container
-          path: container.sif
 
   push-ghcr:
     name: Push Container to GitHub Registry
     needs: build-test-containers
     runs-on: ubuntu-latest
     steps:
-      - name: Download Container Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: container
-          path: .
-      
+
       - name: Login and Deploy Container to GitHub Registry
         if: github.event_name != 'pull_request'
         run: |
@@ -133,11 +122,6 @@ jobs:
     needs: build-test-containers
     runs-on: ubuntu-latest
     steps:
-      - name: Download Container Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: container
-          path: .
 
       - name: Import and Verify SYLABS Cloud Signing Key
         env:
