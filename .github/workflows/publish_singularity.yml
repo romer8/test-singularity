@@ -1,5 +1,5 @@
 name: Singularity Build (native)
-on:
+on: 
   push:
     branches:
       - main
@@ -7,7 +7,7 @@ on:
 
 jobs:
   changes:
-    name: \"Changed Singularity Recipes\"
+    name: "Changed Singularity Recipes"
     runs-on: ubuntu-latest
     outputs:
       changed_file: ${{ steps.files.outputs.added_modified }}
@@ -18,7 +18,7 @@ jobs:
           format: 'json'
 
   build-test-containers:
-    needs: [changes]
+    needs: changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -29,16 +29,30 @@ jobs:
     steps:
       - name: Continue if Singularity Recipe
         run: |
-          if [[ \"${{ matrix.changed_file }}\" = *.def ]]; then
-            echo \"keepgoing=true\" >> $GITHUB_ENV
+          if [[ "${{ matrix.changed_file }}" = *.def ]]; then
+            echo "keepgoing=true" >> $GITHUB_ENV
           fi
 
+      - name: Checkout repository
+        if: ${{ env.keepgoing == 'true' }}
+        uses: actions/checkout@v4
+      
+      - name: Set Container Tag
+        if: ${{ env.keepgoing == 'true' }}
+        run: |
+          TAG="${GITHUB_SHA::7}-x86"
+          echo "Container Tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_ENV
+
       - name: Set up Go
-        if: env.keepgoing == 'true'
+        if: ${{ env.keepgoing == 'true' }}
         uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+        id: go
 
       - name: Install Dependencies
-        if: env.keepgoing == 'true'
+        if: ${{ env.keepgoing == 'true' }}
         run: |
           sudo apt-get update && sudo apt-get install -y \
             build-essential \
@@ -64,7 +78,7 @@ jobs:
             libsubid-dev
 
       - name: Install Singularity
-        if: env.keepgoing == 'true'
+        if: ${{ env.keepgoing == 'true' }}
         env:
           SINGULARITY_VERSION: 4.3.0
           GOPATH: /tmp/go
@@ -79,37 +93,20 @@ jobs:
           make -C builddir
           sudo make -C builddir install
 
-      - name: Check out code for the container build
-        if: env.keepgoing == 'true'
-        uses: actions/checkout@v4
-
       - name: Build Container
-        if: env.keepgoing == 'true'
+        if: ${{ env.keepgoing == 'true' }}
         env:
           recipe: ${{ matrix.changed_file }}
         run: |
-          if [ -f \"${recipe}\" ]; then
-            sudo -E singularity build container.sif ${recipe}
-            tag=$(git rev-parse --short HEAD)
-            tag=${tag}-x86
-            echo \"Tag is ${tag}.\"
-            echo \"tag=${tag}\" >> $GITHUB_ENV
-          else
-            echo \"${recipe} is not found.\"
-            exit 1
-          fi
+          sudo -E singularity build container.sif "${{ matrix.changed_file }}"
+
+      - name: Test Singularity Container
+        if: ${{ env.keepgoing == 'true' }}
+        run: |
+          singularity exec container.sif echo "Container Test Successful!"
 
       - name: Login and Deploy Container
-        if: github.event_name != 'pull_request' && env.keepgoing == 'true'
-        env:
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo $GITHUB_TOKEN | singularity registry login -u $GHCR_USERNAME --password-stdin oras://ghcr.io
-          singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}
-
-      - name: Test Container
-        if: env.keepgoing == 'true'
-        run: |
-          singularity pull oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}
-          singularity exec ${tag}.sif echo \"Container ${tag} executed successfully!\"
+        if: (github.event_name != 'pull_request' && env.keepgoing == 'true')
+        run: |         
+          echo "${{ secrets.GITHUB_TOKEN }}" | singularity registry login -u "${{ secrets.GHCR_USERNAME }}" --password-stdin oras://ghcr.io
+          singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${{ env.tag }}
