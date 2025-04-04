@@ -7,6 +7,6 @@ From: ubuntu:18.04
     apt-get update && apt-get install -y bash
     echo "echo \$HELLO_MESSAGE" > /usr/local/bin/hello
     chmod +x /usr/local/bin/hello
-    echo "Hello World" 
+    
 %runscript
     /usr/local/bin/hello
