@@ -3,10 +3,11 @@ on:
   push:
     branches:
       - main
+      - master
 
 jobs:
   changes:
-    name: "Changed Singularity Recipes"
+    name: \"Changed Singularity Recipes\"
     runs-on: ubuntu-latest
     outputs:
       changed_file: ${{ steps.files.outputs.added_modified }}
@@ -28,8 +29,8 @@ jobs:
     steps:
       - name: Continue if Singularity Recipe
         run: |
-          if [[ "${{ matrix.changed_file }}" = *.def ]]; then
-            echo "keepgoing=true" >> $GITHUB_ENV
+          if [[ \"${{ matrix.changed_file }}\" = *.def ]]; then
+            echo \"keepgoing=true\" >> $GITHUB_ENV
           fi
 
       - name: Set up Go
@@ -87,14 +88,14 @@ jobs:
         env:
           recipe: ${{ matrix.changed_file }}
         run: |
-          if [ -f "${recipe}" ]; then
+          if [ -f \"${recipe}\" ]; then
             sudo -E singularity build container.sif ${recipe}
-            tag=$(git describe --tags --always)
+            tag=$(git rev-parse --short HEAD)
             tag=${tag}-x86
-            echo "Tag is ${tag}."
-            echo "tag=${tag}" >> $GITHUB_ENV
+            echo \"Tag is ${tag}.\"
+            echo \"tag=${tag}\" >> $GITHUB_ENV
           else
-            echo "${recipe} is not found."
+            echo \"${recipe} is not found.\"
             exit 1
           fi
 
@@ -111,4 +112,4 @@ jobs:
         if: env.keepgoing == 'true'
         run: |
           singularity pull oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}
-          singularity exec ${tag}.sif echo "Container ${tag} executed successfully!"
+          singularity exec ${tag}.sif echo \"Container ${tag} executed successfully!\"
