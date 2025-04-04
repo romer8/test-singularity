@@ -136,6 +136,11 @@ jobs:
         run: |
            echo "${{ secrets.KEY_PASSPHRASE }}" | singularity sign --keyidx 0 container.sif
  
+      - name: Logout from SYLABS Cloud
+        if: ${{ env.keepgoing == 'true' }}      
+        run: |
+           singularity remote logout
+           
       - name: Login and Push Singularity Image to SYLABS Cloud
         if: ${{ env.keepgoing == 'true' }}      
         env:
