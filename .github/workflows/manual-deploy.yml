@@ -140,7 +140,7 @@ jobs:
         if: ${{ env.keepgoing == 'true' }}      
         run: |
            singularity remote logout
-           
+
       - name: Login and Push Singularity Image to SYLABS Cloud
         if: ${{ env.keepgoing == 'true' }}      
         env:
@@ -157,20 +157,23 @@ jobs:
            # Debug: Check file content length
            echo "Token file content length: $(wc -c < "$TOKEN_FILE")"
            
+           REPO_NAME=$(basename "$GITHUB_REPOSITORY")
+           echo "Repository name: $REPO_NAME"
+           
            if singularity remote login --tokenfile "$TOKEN_FILE"; then
               echo "Login successful"
               # 1) Check if the image exists by searching for the exact tag
               
-              echo "Searching for existing image: library://$SYLABS_REPO/${GITHUB_REPOSITORY}:${{ env.tag }}"
-              if singularity search ${GITHUB_REPOSITORY} | grep -q '${{ env.tag }}'; then
+              echo "Searching for existing image: library://$SYLABS_REPO/${REPO_NAME}:${{ env.tag }}"
+              if singularity search ${REPO_NAME} | grep -q '${{ env.tag }}'; then
                 echo "Image found in library, deleting it first..."
-                singularity delete --force library://$SYLABS_REPO/${GITHUB_REPOSITORY}:${{ env.tag }}
+                singularity delete --force library://$SYLABS_REPO/${REPO_NAME}:${{ env.tag }}
               else
                 echo "Image does not exist, skipping delete step."
               fi
 
               # 2) Now push the new image
-              singularity push container.sif library://$SYLABS_REPO/${GITHUB_REPOSITORY}:${{ env.tag }}              
+              singularity push container.sif library://$SYLABS_REPO/${REPO_NAME}:${{ env.tag }}              
            else
               echo "Login failed"
               exit 1
