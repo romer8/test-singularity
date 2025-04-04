@@ -140,7 +140,7 @@ jobs:
         if: ${{ env.keepgoing == 'true' }}      
         env:
            SYLABS_AUTH_TOKEN: ${{ secrets.SYLABS_AUTH_TOKEN }}
-           SYLABS_REPO: ${{ secrets.SYLABS_REPO }}
+           SYLABS_REPO: gioelkin/test
         run: |
            # Debug: Check token length (don't print the actual token)
            echo "Token length: ${#SYLABS_AUTH_TOKEN}"
@@ -155,9 +155,9 @@ jobs:
            if singularity remote login --tokenfile "$TOKEN_FILE"; then
               echo "Login successful"
               # 1) Check if the image exists by searching for the exact tag
-              #    We grep for 'latest_x86' to confirm a match
+              
               echo "Searching for existing image: library://$SYLABS_REPO/${GITHUB_REPOSITORY}:${{ env.tag }}"
-              if singularity search ${GITHUB_REPOSITORY} | grep -q 'latest_x86'; then
+              if singularity search ${GITHUB_REPOSITORY} | grep -q '${{ env.tag }}'; then
                 echo "Image found in library, deleting it first..."
                 singularity delete --force library://$SYLABS_REPO/${GITHUB_REPOSITORY}:${{ env.tag }}
               else
